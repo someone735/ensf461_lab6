@@ -16,18 +16,20 @@ char* strategy;
 #define PROCESSLIMIT 4
 int TLBEntries = 8;
 u_int32_t* PhysMemory;
+int pageLimit = 256;
+int alreadyDefined = FALSE;
 
 
 //needed structs
-typedef struct{
-    Page* pageTable;
-} Process;
-
 typedef struct{
     int validBit;
     int VPNBits;
     int PFNBits;
 } Page;
+typedef struct{
+    Page* pageTable;
+} Process;
+
 
 Process processList[PROCESSLIMIT];
 int processID = 0;
@@ -88,6 +90,14 @@ int main(int argc, char* argv[]) {
             continue;
         } else if (strcmp(tokens[0], "define") == 0){
             //Memory instantiation complete. OFF bits: <OFF>. PFN bits: <PFN>. VPN bits: <VPN>
+            //Current PID: 0. Error: multiple calls to define in the same trace
+            if (alreadyDefined == TRUE)
+            {
+                fprintf(output_file,"Current PID: %d. Error: multiple calls to define in the same trace\n",processID);
+                fflush(output_file);
+                return -1;
+            }
+            
             int OFFBits = atoi(tokens[1]);
             int PFNBits = atoi(tokens[2]);
             int VPNBits = atoi(tokens[3]);
@@ -97,10 +107,36 @@ int main(int argc, char* argv[]) {
 
             for (int i = 0; i < 4; i++)
             {
+                processList[i].pageTable = (Page*)malloc(pageLimit*sizeof(Page));
                 
+                for (int x = 0; x < pageLimit; x++)
+                {
+                    processList[i].pageTable[x].validBit = FALSE;
+                    processList[i].pageTable[x].VPNBits = i;
+                    processList[i].pageTable[x].PFNBits = 0;
+                    
+                }
             }
-            
-        }        
+            fprintf(output_file, "Current PID: %d. Memory instantiation complete. OFF bits: %d. PFN bits: %d. VPN bits: %d\n", processID, OFFBits, PFNBits, VPNBits);
+            fflush(output_file);
+            alreadyDefined = TRUE;
+        } else if (strcmp(tokens[0], "ctxswitch") == 0)
+        {
+            int newProcessID = atoi(tokens[1]);
+
+            if (newProcessID <0 || PROCESSLIMIT <= newProcessID)
+            {
+                //Current PID: 3. Invalid context switch to process 5
+                fprintf(output_file, "Current PID: %d. Invalid context switch to process %d\n", processID, newProcessID);
+                fflush(output_file);
+                
+            } else {
+                processID = newProcessID;
+                fprintf(output_file, "Current PID: %d. Switched execution context to process: %d\n", processID, newProcessID);
+                fflush(output_file);
+            }
+        }
+               
         
         
         // Deallocate tokens
