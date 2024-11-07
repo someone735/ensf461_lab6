@@ -115,6 +115,7 @@ void add_TLB_entry(int vpn, int pfn) {
             }
         }
     } else if (strcmp(strategy, "LRU") == 0) {
+        replace_index = 0;
         for (int i = 0; i < TLBEntries; i++) {
             if (!TLB[i].valid) {
                 replace_index = i;
